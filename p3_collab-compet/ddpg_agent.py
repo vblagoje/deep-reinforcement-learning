@@ -59,17 +59,15 @@ class Agent:
             experiences = self.memory.sample()
             self.learn(experiences, self.gamma)
 
-    def act(self, states, eps):
+    def act(self, states, eps=1.0, add_noise=True):
         """Returns actions for given state as per current policy."""
         states = torch.from_numpy(states).float().to(device)
-        actions = np.zeros((1, self.action_size))
         self.actor_local.eval()
         with torch.no_grad():
-            for agent_num, state in enumerate(states):
-                action = self.actor_local(state).cpu().data.numpy()
-                actions[agent_num, :] = action
+            actions = self.actor_local(states).cpu().data.numpy()
         self.actor_local.train()
-        actions += eps * self.noise.sample()
+        if add_noise:
+            actions += eps * self.noise.sample()
         return np.clip(actions, -1, 1)
 
     def reset(self):
@@ -86,10 +84,12 @@ class Agent:
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples
             gamma (float): discount factor
         """
+        # 128x48, 128x4, 128x1, 128x48, 128x2
         states, actions, rewards, next_states, dones = experiences
 
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
+        # 128x2
         actions_next = self.actor_target(next_states)
 
         if self.id == 0:
